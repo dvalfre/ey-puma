@@ -1,0 +1,44 @@
+# application root
+directory "/data/<%= @app_name %>/current"
+
+# environment
+environment "<%= @framework_env %>"
+
+# daemonize the process
+daemonize true
+
+# location of the pidfile
+pidfile "/var/run/puma_<%= @app_name %>.pid"
+
+# location of state file
+state_path "/var/run/puma_<%= @app_name %>.state"
+
+# log files
+stdout_redirect "/data/<%= @app_name %>/current/log/puma.stdout.log", "/data/<%= @app_name %>/current/log/puma.stderr.log", true
+
+# bind to unix socket
+bind 'unix:///var/run/puma_<%= @app_name %>.sock'
+
+# threads  per worker
+threads <%= @threads.join(',') %>
+
+# number of workers
+workers <%= @workers %>
+
+# preload application
+preload_app!
+
+# code to run on boot of each worker
+on_worker_boot do
+  # reconnect to database
+  if defined?(ActiveRecord)
+    ActiveSupport.on_load(:active_record) do
+      ActiveRecord::Base.establish_connection
+    end
+  end
+end
+
+# code to run before doing a restart
+on_restart do
+  
+end

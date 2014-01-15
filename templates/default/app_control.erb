@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# paths
+current_path="/data/<%= @app_name %>/current"
+shared_path="/data/<%= @app_name %>/shared"
+binstubs_path="${current_path}/ey_bundler_binstubs"
+config="${shared_path}/config/puma.rb"
+pumactl="${binstubs_path}/pumactl"
+
+# load environment
+source "/etc/profile"
+source "${shared_path}/config/env{,.custom}"
+
+# move to current path
+cd "${current_path}"
+
+# check user
+if [[ $(id -u) -eq 0 ]] ; then
+  echo "ERROR: This script must be run as a user, not as root." 2>&1
+  exit 1
+fi
+
+# useage
+useage () {
+  echo "Usage: $0 {start|stop|status|restart|deploy}"
+  exit 1
+}
+
+# error
+error () {
+  echo "${@}" 1>&2
+  exit 1
+}
+
+# puma action
+puma_action () {
+  action=$1
+  $pumactl --config-file $config $action
+}
+
+# deploy
+deploy () {
+  pid=$(cat /var/run/puma_<%= @app_name %>.pid)
+  kill -s USR2 $pid
+}
+
+# sanity checks
+[[ ! -f "${binstubs_path}/puma" ]] && error "Puma could not be found in your Gemfile"
+[[ ! -f $config ]] && error "No config file found at ${config}" 
+[[ ! -f $pumactl ]] && error "No pumactl binstub found at ${pumactl}"
+
+# execute action
+case "$1" in
+  deploy  ) deploy ;;
+  stop    ) puma_action stop ;;
+  start   ) puma_action start ;;
+  status  ) puma_action status ;;
+  restart ) puma_action restart ;;
+  *       ) useage ;;
+esac

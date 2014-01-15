@@ -1,0 +1,57 @@
+upstream upstream_<%= @app_name %> {
+  server unix:///var/run/puma_<%= @app_name %>.sock;
+}
+
+server {
+  # The listen directive specifies the address and port accepted by the enclosing server {...} block. It is possible to specify only an address, only a port, or a server name as the address.
+  listen <%= @port %>;
+
+  #
+  # Server Names
+  #
+  # This is the list of IP's and/or domain names with any wildcards or
+  # subdomains. The special value '_' is used to match all domains and IPs and
+  # generally denotes the default server for the entire Nginx process.
+  #
+  # Note that if you specify any domains with wild cards, the very first domain
+  # listed must be without a wild card. For example:
+  #
+  # server_name www.mydomain.org *.mydomain.org;
+  #
+  # It is good practice to include wildcard subdomains so that Nginx will not
+  # require a restart when new services are added for an application.
+  #
+  server_name _;
+
+  #
+  # The application root which is inherited for all location blocks below.
+  #
+  root /data/<%= @app_name %>/current/public;
+  access_log /var/log/engineyard/nginx/<%= @app_name %>.access.log main;
+  error_log /var/log/engineyard/nginx/<%= @app_name %>.error.log notice;
+
+  include /etc/nginx/common/servers.conf;
+
+  # Location for the Upstream
+  location @app_<%= @app_name %> {
+    include /etc/nginx/common/proxy.conf;
+    proxy_pass http://upstream_<%= @app_name %>;
+  }
+
+  # set Expire header on assets: see http://developer.yahoo.com/performance/rules.html#expires
+  location ~ ^/(images|assets|javascripts|stylesheets)/ {
+    try_files  $uri $uri/index.html /last_assets/$uri /last_assets/$uri.html @app_<%= @app_name %>;
+    expires 10y;
+  }  
+
+  location / {
+    if (-f $document_root/system/maintenance.html) { return 503; }
+    try_files  $uri $uri/index.html $uri.html @app_<%= @app_name %>;
+  }
+  
+  location = /500.html {
+    root /data/<%= @app_name %>/current/public;
+  }
+  
+  include /etc/nginx/servers/<%= @app_name %>/custom.conf;
+}

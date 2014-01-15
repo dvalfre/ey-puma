@@ -1,0 +1,6 @@
+check process puma_<%= @app_name %>
+  with pidfile /var/run/puma_<%= @app_name %>.pid
+  start program = "/engineyard/bin/app_<%= @app_name %> start" as uid <%= @user %> and gid <%= @user %>
+  stop program = "/engineyard/bin/app_<%= @app_name %> stop" as uid <%= @user %> and gid <%= @user %>
+  if mem > <%= @memory_limit %> MB for 2 cycles then restart
+  group <%= @app_name %>
