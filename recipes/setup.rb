@@ -1,12 +1,20 @@
+#
+# Cookbook Name:: puma
+# Recipe:: setup
+#
+
 if node[:instance_role][/app|solo/]
+  # are we on a solo instance?
   solo = !!node[:instance_role][/solo/]
   
+  # reload monit command
   execute "reload-monit" do
     command "monit reload"
     action :nothing
   end
   
   node[:applications].each do |app_name, data|
+    # puma config file
     template "/data/#{app_name}/shared/config/puma.rb" do
       source "puma.rb.erb"
       owner node[:owner_name]
@@ -21,6 +29,7 @@ if node[:instance_role][/app|solo/]
       })
     end
   
+    # application's nginx config file
     template "/etc/nginx/servers/#{app_name}.conf" do
       source "nginx_app.conf.erb"
       owner node[:owner_name]
@@ -34,6 +43,7 @@ if node[:instance_role][/app|solo/]
       notifies :reload, resources(:service => "nginx")
     end
     
+    # monit file
     template "/etc/monit.d/puma_#{app_name}.monitrc" do
       source "puma.monitrc.erb"
       owner node[:owner_name]
@@ -48,6 +58,7 @@ if node[:instance_role][/app|solo/]
       notifies :run, resources(:execute => 'reload-monit')
     end
     
+    # app control file
     template "/engineyard/bin/app_#{app_name}" do
       source "app_control.erb"
       owner node[:owner_name]
